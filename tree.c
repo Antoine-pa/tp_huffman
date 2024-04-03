@@ -28,13 +28,21 @@ void free_tree(tree_t tree) {
     free(tree);
 }
 
-void print_tree(tree_t tree) {
+void _print_tree(tree_t tree) {
     if(tree->is_leaf) {
-        printf("%c ", tree->leaf_label);
+        printf("%c", tree->leaf_label);
         return;
     }
-    print_tree(tree->left_child);
-    print_tree(tree->right_child);
+    printf("(");
+    _print_tree(tree->left_child);
+    printf(")-(");
+    _print_tree(tree->right_child);
+    printf(")");
+}
+
+void print_tree(tree_t tree) {
+    _print_tree(tree);
+    printf("\n");
 }
 
 int tree_height(tree_t tree) {

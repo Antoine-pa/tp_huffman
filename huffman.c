@@ -3,7 +3,7 @@
 
 int* count_occurences(char* text) {
     int* occurences = malloc(sizeof(int)*256);
-    int occ = 0;
+    int occ;
     for(int i = 0; i<256; i++) {
         occ = 0;
         int j = 0;
@@ -23,7 +23,7 @@ heap_t build_heap_from_text(char* text) {
     int* occ = count_occurences(text);
     for(int i = 0; i<256; i++) {
         if (occ[i] > 0) {
-            insert_heap(init_tree(i, occ[i]), heap);
+            insert_heap(init_tree(i, occ[i]), heap); // construction de la file de priorité min avec les occurences
         }
     }
     free(occ);
@@ -32,25 +32,30 @@ heap_t build_heap_from_text(char* text) {
 
 tree_t build_code_from_heap(heap_t heap) {
     while(heap_size(heap)>1) {
-        insert_heap(merge_trees(extract_heap(heap), extract_heap(heap)), heap);
+        insert_heap(merge_trees(extract_heap(heap), extract_heap(heap)), heap); //ajout de la fusion des deux arbres min
     }
     return extract_heap(heap);
 }
 
 void code_from_tree_a(tree_t huffman_tree, char** codes, char* actual_code, int level) {
+    //calcul récursif des codes de l'arbre:
+    //codes : le tableau de toutes les strings (codes de chaque char)
+    //actual_code : construction du code dans la descente de l'arbre
+    //level : profondeur dans l'arbre
+
     if(huffman_tree == NULL) {
         return;
     }
-    if(huffman_tree->is_leaf) {
-        char* code = malloc(sizeof(char)*(level+1));
-        strncpy(code, actual_code, level);
+    if(huffman_tree->is_leaf) {//si actual_code désigne le code d'un char
+        char* code = malloc(sizeof(char)*(level+1)); //+1 pour le "\0"
+        strncpy(code, actual_code, level); //copie du code dans un nouveau tab qu'on garde dans codes
         code[level] = 0;
         codes[(int)huffman_tree->leaf_label] = code;
         return;
     }
-    actual_code[level] = 48;
+    actual_code[level] = 48; //0 -> gauche
     code_from_tree_a(huffman_tree->left_child, codes, actual_code, level+1);
-    actual_code[level] = 49;
+    actual_code[level] = 49; //1 -> droite
     code_from_tree_a(huffman_tree->right_child, codes, actual_code, level+1);
 }
 
@@ -59,9 +64,8 @@ char** code_from_tree(tree_t huffman_tree) {
     for(int i=0; i<256; i++) {
         codes[i] = NULL;
     }
-    char* code = malloc(sizeof(char)*tree_height(huffman_tree));
+    char* code = malloc(sizeof(char)*tree_height(huffman_tree)); //la taille max d'un code est la hauteur de l'arbre
     code_from_tree_a(huffman_tree, codes, code, 0);
-
     free (code);
     return codes;
 }
@@ -92,27 +96,30 @@ char* encode(char* text, tree_t huffman_tree) {
         i++;
     }
     free_code(codes);
-    output[size] = 0;
+    output[size] = 0; //ajout du "\0"
     return output;
 }
 
 int get_char(char* text, int index, tree_t huffman_tree, int* len) {
+    //index : char courant dans text
+    //len : longueur du code du charactère en pointeur
+
     if (huffman_tree->is_leaf) {
         return (int)huffman_tree->leaf_label;
     }
     *(len) = *(len) + 1;
-    if (text[index] == 48) {
+    if (text[index] == 48) { //0 -> en continue à gauche
         return get_char(text, index+1, huffman_tree->left_child, len);
-    }
+    } //1 -> droite
     return get_char(text, index+1, huffman_tree->right_child, len);
 }
 
 char* decode(char* compressed_text, tree_t huffman_tree) {
-    int size = 10000;
+    int size = 2*strlen(compressed_text); // à modifier, il faudrait calculer la taille exacte du tableau dont on a besoin.
     char* output = malloc(sizeof(char)*(size+1));
-    int i = 0;
-    int j = 0;
-    int len = 0;
+    int i = 0; //parcours de compressed_text
+    int j = 0; // parcours de output
+    int len = 0; //longueur du code du char courant
     while(compressed_text[i] != 0) {
         int c = get_char(compressed_text, i, huffman_tree, &len);
         output[j] = c;
@@ -120,7 +127,7 @@ char* decode(char* compressed_text, tree_t huffman_tree) {
         len = 0;
         j++;
     }
-    output[j] = 0;
+    output[j] = 0; //"\0"
     return output;
 }
 
